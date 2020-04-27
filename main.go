@@ -1,21 +1,40 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
+
+	"golang.org/x/sys/windows/registry"
 
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 )
 
-var optionCadObject = flag.String("v", "BricscadApp.AcadApplication", "Ole automation name")
+func getCadApplicationName() (string, error) {
+	k, err := registry.OpenKey(registry.CLASSES_ROOT,
+		`BricscadApp.AcadApplication\CurVer`,
+		registry.QUERY_VALUE)
+	if err != nil {
+		return "", err
+	}
+	defer k.Close()
+
+	val, _, err := k.GetStringValue("")
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
 
 func mains(args []string) error {
+	cadname, err := getCadApplicationName()
+	if err != nil {
+		return err
+	}
 	ole.CoInitialize(0)
 	defer ole.CoUninitialize()
 
-	_cad, err := oleutil.CreateObject(*optionCadObject)
+	_cad, err := oleutil.CreateObject(cadname)
 	if err != nil {
 		return err
 	}
@@ -41,8 +60,7 @@ func mains(args []string) error {
 }
 
 func main() {
-	flag.Parse()
-	if err := mains(flag.Args()); err != nil {
+	if err := mains(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
