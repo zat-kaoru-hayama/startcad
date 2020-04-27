@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 )
+
+var optionCadName = flag.String("v", "", "BricsCAD class name")
 
 func getCadApplicationName() (string, error) {
 	k, err := registry.OpenKey(registry.CLASSES_ROOT,
@@ -27,10 +30,15 @@ func getCadApplicationName() (string, error) {
 }
 
 func mains(args []string) error {
-	cadname, err := getCadApplicationName()
-	if err != nil {
-		return err
+	cadname := *optionCadName
+	if cadname == "" {
+		var err error
+		cadname, err = getCadApplicationName()
+		if err != nil {
+			return fmt.Errorf("getCadApplicationName: %w", err)
+		}
 	}
+	fmt.Println(cadname)
 	ole.CoInitialize(0)
 	defer ole.CoUninitialize()
 
@@ -60,7 +68,8 @@ func mains(args []string) error {
 }
 
 func main() {
-	if err := mains(os.Args[1:]); err != nil {
+	flag.Parse()
+	if err := mains(flag.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
